@@ -22,7 +22,7 @@ import torch
 os.makedirs("output/dcgan_diff", exist_ok=True)
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_epochs", type=int, default=200, help="number of epochs of training")
+parser.add_argument("--n_epochs", type=int, default=100, help="number of epochs of training")
 parser.add_argument("--batch_size", type=int, default=32, help="size of the batches")
 parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rate")
 parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
@@ -167,7 +167,7 @@ for epoch in range(opt.n_epochs):
         gen_imgs = generator(z)
 
         # Loss measures generator's ability to fool the discriminator
-        g_loss = adversarial_loss(discriminator(DiffAugment(gen_imgs,policy=policy), valid))  
+        g_loss = adversarial_loss(discriminator(DiffAugment(gen_imgs,policy=policy)), valid)  
 
         g_loss.backward()
         optimizer_G.step()
@@ -179,7 +179,7 @@ for epoch in range(opt.n_epochs):
         optimizer_D.zero_grad()
 
         # Measure discriminator's ability to classify real from generated samples
-        real_loss = adversarial_loss(discriminator(DiffAugment(real_imgs,policy=policy), valid))
+        real_loss = adversarial_loss(discriminator(DiffAugment(real_imgs,policy=policy)), valid)
         fake_loss = adversarial_loss(discriminator(DiffAugment(gen_imgs.detach(),policy=policy)), fake)
         d_loss = (real_loss + fake_loss) / 2
 
