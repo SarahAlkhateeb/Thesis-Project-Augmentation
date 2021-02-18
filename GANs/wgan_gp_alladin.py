@@ -43,7 +43,7 @@ class Discriminator(nn.Module):
             nn.Conv2d(
                 in_channels, out_channels, kernel_size, stride, padding, bias=False,
             ),
-            nn.InstanceNorm2d(out_channels, affine=True),
+            nn.InstanceNorm2d(out_channels, affine=True), #wgan-gp papers suggests normalization schemes in critic which don’t introduce correlations between examples.  
             nn.LeakyReLU(0.2),
         )
 
@@ -84,8 +84,11 @@ class Generator(nn.Module):
 def initialize_weights(model):
     # Initializes weights according to the DCGAN paper
     for m in model.modules():
-        if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d, nn.BatchNorm2d)):
+        if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)): 
             nn.init.normal_(m.weight.data, 0.0, 0.02)
+        elif isinstance(m, (nn.BatchNorm2d,nn.InstanceNorm2d)):
+            nn.init.normal_(m.weight.data, 1.0, 0.02)
+            nn.init.constant_(m.bias.data, 0)
 
 
 def test():
@@ -155,7 +158,7 @@ Z_DIM = 100
 NUM_EPOCHS = 5
 FEATURES_CRITIC = 16
 FEATURES_GEN = 16
-CRITIC_ITERATIONS = 3
+CRITIC_ITERATIONS = 5
 LAMBDA_GP = 10
 
 # Configure data loader
