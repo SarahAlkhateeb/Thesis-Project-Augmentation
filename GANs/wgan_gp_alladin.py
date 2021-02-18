@@ -155,7 +155,7 @@ BATCH_SIZE = 64
 IMAGE_SIZE = 64
 CHANNELS_IMG = 3
 Z_DIM = 100
-NUM_EPOCHS = 5
+NUM_EPOCHS = 700
 FEATURES_CRITIC = 16
 FEATURES_GEN = 16
 CRITIC_ITERATIONS = 5
@@ -171,7 +171,7 @@ transforms = transforms.Compose(
             [0.5 for _ in range(CHANNELS_IMG)], [0.5 for _ in range(CHANNELS_IMG)]),
     ]
 )
-dataroot = "/Users/lisabodlak/Desktop/Thesis/data"
+dataroot = "/home/2019/bodlak/MS-2021/datainbackup/thesis/thesis/GANs/data"
 dataset = datasets.ImageFolder(root=dataroot, transform=transforms)
 loader = DataLoader(
     dataset,
