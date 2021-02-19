@@ -156,8 +156,8 @@ IMAGE_SIZE = 64
 CHANNELS_IMG = 3
 Z_DIM = 100
 NUM_EPOCHS = 700
-FEATURES_CRITIC = 16
-FEATURES_GEN = 16
+FEATURES_CRITIC = 64 #aladin uses 16, pytorch 64
+FEATURES_GEN = 32 #alading uses 16, pytorch 32
 CRITIC_ITERATIONS = 5
 LAMBDA_GP = 10
 
@@ -193,7 +193,7 @@ opt_gen = optim.Adam(gen.parameters(), lr=LEARNING_RATE, betas=(0.0, 0.9))
 opt_critic = optim.Adam(critic.parameters(), lr=LEARNING_RATE, betas=(0.0, 0.9))
 
 # for saving image progress
-os.makedirs("output/wgan_gp_aladdin", exist_ok=True)
+os.makedirs("output/wgan_gp_aladdin_run2", exist_ok=True)
 fixed_noise = torch.randn(32, Z_DIM, 1, 1).to(device)
 step = 0
 
@@ -244,7 +244,7 @@ for epoch in range(NUM_EPOCHS):
     with torch.no_grad():
         if epoch % 2 == 0:
             fake = gen(fixed_noise)
-            save_image(fake[:25], "output/wgan_gp_aladdin/%d.png" % step, nrow=5, normalize=True)
+            save_image(fake[:25], "output/wgan_gp_aladdin_run2/%d.png" % step, nrow=5, normalize=True)
             step += 1
                
                
