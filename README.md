@@ -11,11 +11,11 @@ We are training a `CycleGAN` to enhance our images.
 
 ### GANs for Data Augmentation
 We try different GAN versions to increase our training data:
--`DCGAN`
--`DCGAN + DiffAugment`
--`WGAN-GP + DCGAN Arch.`
--`WGAN-GP + DCGAN Arch. + DiffAugment`
--`WGAN-GP + Resnet Arch.`
+- `DCGAN`
+- `DCGAN + DiffAugment`
+- `WGAN-GP + DCGAN Arch.`
+- `WGAN-GP + DCGAN Arch. + DiffAugment`
+- `WGAN-GP + Resnet Arch.`
 
 #### Evaluation
 We use the [offical pytorch FID implementation](https://github.com/mseitzer/pytorch-fid) to evaluate the generated images from the different GANs.
