@@ -7,7 +7,7 @@ Discriminator and Generator implementation from DCGAN paper
 """
 import sys
 sys.path.append("..")
-from GANs.DiffAugment_pytorch import DiffAugment
+from GANs_Augmentation.DiffAugment_pytorch import DiffAugment
 import os
 import torch
 import torch.nn as nn
@@ -171,7 +171,7 @@ transforms = transforms.Compose(
             [0.5 for _ in range(CHANNELS_IMG)], [0.5 for _ in range(CHANNELS_IMG)]),
     ]
 )
-dataroot = "/home/2019/bodlak/MS-2021/datainbackup/thesis/thesis/GANs/data"
+dataroot = "/home/2019/bodlak/MS-2021/datainbackup/thesis/thesis/GANs_Augmentation/data"
 dataset = datasets.ImageFolder(root=dataroot, transform=transforms)
 loader = DataLoader(
     dataset,
@@ -193,7 +193,7 @@ opt_gen = optim.Adam(gen.parameters(), lr=LEARNING_RATE, betas=(0.0, 0.9))
 opt_critic = optim.Adam(critic.parameters(), lr=LEARNING_RATE, betas=(0.0, 0.9))
 
 # for saving image progress
-os.makedirs("output/wgan_gp_aladdin_run3", exist_ok=True)
+os.makedirs("output/wgan_gp_run4", exist_ok=True)
 fixed_noise = torch.randn(32, Z_DIM, 1, 1).to(device)
 step = 0
 
@@ -244,7 +244,7 @@ for epoch in range(NUM_EPOCHS):
     with torch.no_grad():
         if epoch % 2 == 0:
             fake = gen(fixed_noise)
-            save_image(fake[:25], "output/wgan_gp_aladdin_run3/%d.png" % step, nrow=5, normalize=True)
+            save_image(fake[:25], "output/wgan_gp_run4/%d.png" % step, nrow=5, normalize=True)
             step += 1
                
                
