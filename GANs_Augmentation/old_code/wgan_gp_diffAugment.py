@@ -5,6 +5,7 @@
 Models:
 Discriminator and Generator implementation from DCGAN paper
 """
+import argparse
 import sys
 sys.path.append("..")
 from GANs_Augmentation.DiffAugment_pytorch import DiffAugment
@@ -20,7 +21,18 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from torchvision.utils import save_image
 
-
+parser = argparse.ArgumentParser()
+parser.add_argument("--name", type=str, default="wgan_gp_diff", help="name of the model")
+parser.add_argument("--n_epochs", type=int, default=700, help="number of epochs of training")
+parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
+parser.add_argument("--lr", type=float, default=1e-4, help="adam: learning rate")
+parser.add_argument("--latent_dim", type=int, default=100, help="dimensionality of the latent space")
+parser.add_argument("--img_size", type=int, default=64, help="size of each image dimension")
+parser.add_argument("--channels", type=int, default=3, help="number of image channels")
+parser.add_argument("--critic_iter", type=int, default=5, help="number of critic iterations before generator update")
+parser.add_argument("--lambda_gp", type=int, default=10, help="penalty coefficient")
+opt = parser.parse_args()
+print(opt)
 
 
 class Discriminator(nn.Module):
@@ -132,7 +144,7 @@ Utility functions for saving checkpoints
 """
 
 
-def save_checkpoint(state, filename="celeba_wgan_gp.pth.tar"):
+def save_checkpoint(state, filename):
     print("=> Saving checkpoint")
     torch.save(state, filename)
 
@@ -150,16 +162,16 @@ Training of WGAN-GP
 
 # Hyperparameters etc.
 device = "cuda" if torch.cuda.is_available() else "cpu"
-LEARNING_RATE = 1e-4
-BATCH_SIZE = 64
-IMAGE_SIZE = 64
-CHANNELS_IMG = 3
-Z_DIM = 100
-NUM_EPOCHS = 900
+LEARNING_RATE = opt.lr
+BATCH_SIZE = opt.batch_size
+IMAGE_SIZE = opt.img_size
+CHANNELS_IMG = opt.channels
+Z_DIM = opt.latent_dim
+NUM_EPOCHS = opt.n_epochs
 FEATURES_CRITIC = 64 #aladin uses 16, pytorch 64
 FEATURES_GEN = 32 #alading uses 16, pytorch 32
-CRITIC_ITERATIONS = 5
-LAMBDA_GP = 10
+CRITIC_ITERATIONS = opt.critic_iter
+LAMBDA_GP = opt.lambda_gp
 
 # Configure data loader
 transforms = transforms.Compose(
@@ -171,7 +183,8 @@ transforms = transforms.Compose(
             [0.5 for _ in range(CHANNELS_IMG)], [0.5 for _ in range(CHANNELS_IMG)]),
     ]
 )
-dataroot = "/home/2019/bodlak/MS-2021/datainbackup/thesis/thesis/GANs_Augmentation/data"
+#dataroot = "/home/2019/bodlak/MS-2021/datainbackup/thesis/thesis/GANs_Augmentation/data" #on server
+dataroot= "/Users/lisabodlak/Desktop/Thesis/code/GANs_Augmentation/data" #on mac
 dataset = datasets.ImageFolder(root=dataroot, transform=transforms)
 loader = DataLoader(
     dataset,
@@ -193,9 +206,9 @@ opt_gen = optim.Adam(gen.parameters(), lr=LEARNING_RATE, betas=(0.0, 0.9))
 opt_critic = optim.Adam(critic.parameters(), lr=LEARNING_RATE, betas=(0.0, 0.9))
 
 # for saving image progress
-os.makedirs("output/wgan_gp_diffAugment/run1", exist_ok=True)
+os.makedirs(f'output/{opt.name}', exist_ok=True)
 fixed_noise = torch.randn(32, Z_DIM, 1, 1).to(device)
-step = 0
+
 
 # policy for diffaugment
 policy = 'color,translation,cutout'
@@ -244,5 +257,5 @@ for epoch in range(NUM_EPOCHS):
     with torch.no_grad():
         if epoch % 2 == 0:
             fake = gen(fixed_noise)
-            save_image(fake[:25], "output/wgan_gp_diffAugment/run1/%d.png" % step, nrow=5, normalize=True)
-            step += 1
+            save_image(fake[:25], f'output/{opt.name}/%d.png' % epoch, nrow=5, normalize=True)
+            

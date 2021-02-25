@@ -2,7 +2,7 @@
 # Code taken from https://github.com/eriklindernoren/PyTorch-GAN/blob/master/implementations/dcgan/dcgan.py
 import sys
 sys.path.append("..")
-from GANs.DiffAugment_pytorch import DiffAugment
+from GANs_Augmentation.DiffAugment_pytorch import DiffAugment
 import argparse
 import os
 import numpy as np

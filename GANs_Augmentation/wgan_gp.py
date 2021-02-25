@@ -1,12 +1,14 @@
-##### WGAN-GP with DCGAN Generator and Discriminator #####
+##### WGAN-GP with DCGAN Generator and Discriminator and optionally with DiffAugment#####
 # code inspired by https://github.com/aladdinpersson/Machine-Learning-Collection/tree/master/ML/Pytorch/GANs/4.%20WGAN-GP
 
 """
 Models:
 Discriminator and Generator implementation from DCGAN paper
 """
+import argparse
 import sys
 sys.path.append("..")
+from GANs_Augmentation.DiffAugment_pytorch import DiffAugment
 import os
 import torch
 import torch.nn as nn
@@ -18,6 +20,24 @@ import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from torchvision.utils import save_image
+
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--name", type=str, default="wgan_gp", help="name of the model")
+parser.add_argument("--n_epochs", type=int, default=700, help="number of epochs of training")
+parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
+parser.add_argument("--lr", type=float, default=1e-4, help="adam: learning rate")
+parser.add_argument("--latent_dim", type=int, default=100, help="dimensionality of the latent space")
+parser.add_argument("--img_size", type=int, default=64, help="size of each image dimension")
+parser.add_argument("--channels", type=int, default=3, help="number of image channels")
+parser.add_argument("--critic_iter", type=int, default=5, help="number of critic iterations before generator update")
+parser.add_argument("--lambda_gp", type=int, default=10, help="penalty coefficient")
+parser.add_argument("--test", type=bool, default=False, help="if true train, if false generate images from trained model")
+parser.add_argument("--num_output",type=int, default=100, help='number of generated outputs')
+parser.add_argument("--diff_augment",type=bool, default=False, help='use Diffaugment or not. Default: False')
+opt = parser.parse_args()
+print(opt)
 
 
 
@@ -126,121 +146,142 @@ def gradient_penalty(critic, real, fake, device="cpu"):
     gradient_penalty = torch.mean((gradient_norm - 1) ** 2)
     return gradient_penalty
 
-"""
-Utility functions for saving checkpoints
-"""
-
-
-def save_checkpoint(state, filename="celeba_wgan_gp.pth.tar"):
-    print("=> Saving checkpoint")
-    torch.save(state, filename)
-
-
-def load_checkpoint(checkpoint, gen, disc):
-    print("=> Loading checkpoint")
-    gen.load_state_dict(checkpoint['gen'])
-    disc.load_state_dict(checkpoint['disc'])
-
 
 """
 Training of WGAN-GP
 """
-
-
 # Hyperparameters etc.
+
 device = "cuda" if torch.cuda.is_available() else "cpu"
-LEARNING_RATE = 1e-4
-BATCH_SIZE = 64
-IMAGE_SIZE = 64
-CHANNELS_IMG = 3
-Z_DIM = 100
-NUM_EPOCHS = 900
+LEARNING_RATE = opt.lr
+BATCH_SIZE = opt.batch_size
+IMAGE_SIZE = opt.img_size
+CHANNELS_IMG = opt.channels
+Z_DIM = opt.latent_dim
+NUM_EPOCHS = opt.n_epochs
 FEATURES_CRITIC = 64 #aladin uses 16, pytorch 64
 FEATURES_GEN = 32 #alading uses 16, pytorch 32
-CRITIC_ITERATIONS = 5
-LAMBDA_GP = 10
+CRITIC_ITERATIONS = opt.critic_iter
+LAMBDA_GP = opt.lambda_gp
 
-# Configure data loader
-transforms = transforms.Compose(
-    [
-        transforms.Resize(IMAGE_SIZE),
-        transforms.CenterCrop(IMAGE_SIZE),
-        transforms.ToTensor(),
-        transforms.Normalize(
-            [0.5 for _ in range(CHANNELS_IMG)], [0.5 for _ in range(CHANNELS_IMG)]),
-    ]
-)
-dataroot = "/home/2019/bodlak/MS-2021/datainbackup/thesis/thesis/GANs_Augmentation/data"
-dataset = datasets.ImageFolder(root=dataroot, transform=transforms)
-loader = DataLoader(
-    dataset,
-    batch_size=BATCH_SIZE,
-    shuffle=True,
-)
+# policy for diffaugment
+policy = 'color,translation,cutout'
 
-
-
-# initialize gen and disc, note: discriminator should be called critic,
-# according to WGAN paper (since it no longer outputs between [0, 1])
-gen = Generator(Z_DIM, CHANNELS_IMG, FEATURES_GEN).to(device)
-critic = Discriminator(CHANNELS_IMG, FEATURES_CRITIC).to(device)
-initialize_weights(gen)
-initialize_weights(critic)
-
-# initializate optimizer
-opt_gen = optim.Adam(gen.parameters(), lr=LEARNING_RATE, betas=(0.0, 0.9))
-opt_critic = optim.Adam(critic.parameters(), lr=LEARNING_RATE, betas=(0.0, 0.9))
-
-# for saving image progress
-os.makedirs("output/wgan_gp/run1", exist_ok=True)
-fixed_noise = torch.randn(32, Z_DIM, 1, 1).to(device)
-step = 0
+if not opt.test:
+    
+    # Configure data loader
+    transforms = transforms.Compose(
+        [
+            transforms.Resize(IMAGE_SIZE),
+            transforms.CenterCrop(IMAGE_SIZE),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                [0.5 for _ in range(CHANNELS_IMG)], [0.5 for _ in range(CHANNELS_IMG)]),
+        ]
+    )
+    #dataroot = "/home/2019/bodlak/MS-2021/datainbackup/thesis/thesis/GANs_Augmentation/data" #on server
+    dataroot= "/Users/lisabodlak/Desktop/Thesis/code/GANs_Augmentation/data" #on mac
+    dataset = datasets.ImageFolder(root=dataroot, transform=transforms)
+    loader = DataLoader(
+        dataset,
+        batch_size=BATCH_SIZE,
+        shuffle=True,
+    )
 
 
-gen.train()
-critic.train()
 
-for epoch in range(NUM_EPOCHS):
-    # Target labels not needed! <3 unsupervised
-    for batch_idx, (real, _) in enumerate(loader):
-        real = real.to(device)
-        cur_batch_size = real.shape[0]
+    # initialize gen and disc, note: discriminator should be called critic,
+    # according to WGAN paper (since it no longer outputs between [0, 1])
 
-        # Train Critic: max E[critic(real)] - E[critic(fake)]
-        # equivalent to minimizing the negative of that
-        for _ in range(CRITIC_ITERATIONS):
-            noise = torch.randn(cur_batch_size, Z_DIM, 1, 1).to(device)
-            fake = gen(noise)
-            
-            critic_real = critic(real).reshape(-1)   
-            critic_fake = critic(fake).reshape(-1)
-            gp = gradient_penalty(critic, real, fake, device=device)
-            loss_critic = (
-                -(torch.mean(critic_real) - torch.mean(critic_fake)) + LAMBDA_GP * gp
-            )
-            critic.zero_grad()
-            loss_critic.backward(retain_graph=True)
-            opt_critic.step()
 
-        # Train Generator: max E[critic(gen_fake)] <-> min -E[critic(gen_fake)]
-        gen_fake = critic(fake).reshape(-1)
-        loss_gen = -torch.mean(gen_fake)
-        gen.zero_grad()
-        loss_gen.backward()
-        opt_gen.step()
+    gen = Generator(Z_DIM, CHANNELS_IMG, FEATURES_GEN).to(device)
+    critic = Discriminator(CHANNELS_IMG, FEATURES_CRITIC).to(device)
+    initialize_weights(gen)
+    initialize_weights(critic)
 
-        # Print losses occasionally 
-        if batch_idx % 3 == 0 and batch_idx > 0:
-            print(
-                f"Epoch [{epoch}/{NUM_EPOCHS}] Batch {batch_idx}/{len(loader)} \
-                  Loss D: {loss_critic:.4f}, loss G: {loss_gen:.4f}"
-            )
-    #save progress images
+    # initializate optimizer
+    opt_gen = optim.Adam(gen.parameters(), lr=LEARNING_RATE, betas=(0.0, 0.9))
+    opt_critic = optim.Adam(critic.parameters(), lr=LEARNING_RATE, betas=(0.0, 0.9))
+
+    # for saving image progress
+    os.makedirs(f'output/{opt.name}', exist_ok=True) 
+    fixed_noise = torch.randn(32, Z_DIM, 1, 1).to(device)
+
+
+    gen.train()
+    critic.train()
+
+    for epoch in range(NUM_EPOCHS):
+        # Target labels not needed! <3 unsupervised
+        for batch_idx, (real, _) in enumerate(loader):
+            real = real.to(device)
+            cur_batch_size = real.shape[0]
+
+            # Train Critic: max E[critic(real)] - E[critic(fake)]
+            # equivalent to minimizing the negative of that
+            for _ in range(CRITIC_ITERATIONS):
+                noise = torch.randn(cur_batch_size, Z_DIM, 1, 1).to(device)
+                fake = gen(noise)
+                #add differential augmentation if True
+                if opt.diff_augment:
+                    real=DiffAugment(real,policy=policy)
+                    fake=DiffAugment(fake,policy=policy)
+                
+                critic_real = critic(real).reshape(-1)   
+                critic_fake = critic(fake).reshape(-1)
+                gp = gradient_penalty(critic, real, fake, device=device)
+                loss_critic = (
+                    -(torch.mean(critic_real) - torch.mean(critic_fake)) + LAMBDA_GP * gp
+                )
+                critic.zero_grad()
+                loss_critic.backward(retain_graph=True)
+                opt_critic.step()
+
+            # Train Generator: max E[critic(gen_fake)] <-> min -E[critic(gen_fake)]
+            gen_fake = critic(fake).reshape(-1)
+            loss_gen = -torch.mean(gen_fake)
+            gen.zero_grad()
+            loss_gen.backward()
+            opt_gen.step()
+
+            # Print losses occasionally 
+            if batch_idx % 3 == 0 and batch_idx > 0:
+                print(
+                    f"Epoch [{epoch}/{NUM_EPOCHS}] Batch {batch_idx}/{len(loader)} \
+                    Loss D: {loss_critic:.4f}, loss G: {loss_gen:.4f}"
+                )
+        #save progress images 
+        with torch.no_grad():
+            if epoch % 2 == 0:
+                fake = gen(fixed_noise)
+                save_image(fake[:25], f'output/{opt.name}/%d.png' % epoch, nrow=5, normalize=True)
+
+    #save generator weights           
+    state = {'generator': gen.state_dict(),'params': [Z_DIM, CHANNELS_IMG, FEATURES_GEN]}
+    filename=f'checkpoints/{opt.name}'
+    torch.save(state, filename)
+
+
+#Generate images from trained model            
+else:
+    # dir to save generated images
+    os.makedirs(f'result/{opt.name}', exist_ok=True)
+
+    #load checkpoints for generator
+    state_dict = torch.load(f'checkpoints/{opt.name}')
+    params = state_dict['params']
+    gen = Generator(*params).to(device)
+    gen.load_state_dict(state_dict['generator'])
+    
+    #generate images 
     with torch.no_grad():
-        if epoch % 2 == 0:
-            fake = gen(fixed_noise)
-            save_image(fake[:25], "output/wgan_gp/run1/%d.png" % step, nrow=5, normalize=True)
-            step += 1
-               
+        for i in range(opt.num_output): 
+            noise = torch.randn(1, Z_DIM, 1, 1).to(device) 
+            fake = gen(noise)
+            save_image(fake, f'result/{opt.name}/%d.png' % i)
+
+
+
+
                
         
