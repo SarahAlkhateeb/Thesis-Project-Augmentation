@@ -1,4 +1,4 @@
-##### WGAN-GP with DCGAN Generator and Discriminator #####
+##### WGAN-GP with DCGAN Generator and Discriminator and DiffAugmentation #####
 # code inspired by https://github.com/aladdinpersson/Machine-Learning-Collection/tree/master/ML/Pytorch/GANs/4.%20WGAN-GP
 
 """
@@ -7,6 +7,7 @@ Discriminator and Generator implementation from DCGAN paper
 """
 import sys
 sys.path.append("..")
+from GANs_Augmentation.DiffAugment_pytorch import DiffAugment
 import os
 import torch
 import torch.nn as nn
@@ -192,10 +193,12 @@ opt_gen = optim.Adam(gen.parameters(), lr=LEARNING_RATE, betas=(0.0, 0.9))
 opt_critic = optim.Adam(critic.parameters(), lr=LEARNING_RATE, betas=(0.0, 0.9))
 
 # for saving image progress
-os.makedirs("output/wgan_gp/run1", exist_ok=True)
+os.makedirs("output/wgan_gp_diffAugment/run1", exist_ok=True)
 fixed_noise = torch.randn(32, Z_DIM, 1, 1).to(device)
 step = 0
 
+# policy for diffaugment
+policy = 'color,translation,cutout'
 
 gen.train()
 critic.train()
@@ -211,10 +214,12 @@ for epoch in range(NUM_EPOCHS):
         for _ in range(CRITIC_ITERATIONS):
             noise = torch.randn(cur_batch_size, Z_DIM, 1, 1).to(device)
             fake = gen(noise)
-            
-            critic_real = critic(real).reshape(-1)   
-            critic_fake = critic(fake).reshape(-1)
-            gp = gradient_penalty(critic, real, fake, device=device)
+            #add diffaugment
+            real_diff=DiffAugment(real,policy=policy)
+            fake_diff=DiffAugment(fake,policy=policy)
+            critic_real = critic(real_diff).reshape(-1)   
+            critic_fake = critic(fake_diff).reshape(-1)
+            gp = gradient_penalty(critic, real_diff, fake_diff, device=device)
             loss_critic = (
                 -(torch.mean(critic_real) - torch.mean(critic_fake)) + LAMBDA_GP * gp
             )
@@ -223,7 +228,7 @@ for epoch in range(NUM_EPOCHS):
             opt_critic.step()
 
         # Train Generator: max E[critic(gen_fake)] <-> min -E[critic(gen_fake)]
-        gen_fake = critic(fake).reshape(-1)
+        gen_fake = critic(fake_diff).reshape(-1)
         loss_gen = -torch.mean(gen_fake)
         gen.zero_grad()
         loss_gen.backward()
@@ -239,8 +244,5 @@ for epoch in range(NUM_EPOCHS):
     with torch.no_grad():
         if epoch % 2 == 0:
             fake = gen(fixed_noise)
-            save_image(fake[:25], "output/wgan_gp/run1/%d.png" % step, nrow=5, normalize=True)
+            save_image(fake[:25], "output/wgan_gp_diffAugment/run1/%d.png" % step, nrow=5, normalize=True)
             step += 1
-               
-               
-        
