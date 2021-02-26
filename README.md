@@ -3,14 +3,6 @@
 This repository contains the code used in our thesis project for Data Augmentation.
 
 
-## GANs 
-
-### GANs for Data Enhancement
-
-We are training a `CycleGAN` to enhance our images. We use the [offical pytorch implementation](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix). 
-
-### GANs for Data Augmentation
-
 We try different GAN versions to increase our training data:
 - `DCGAN`
 - `DCGAN + DiffAugment`
