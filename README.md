@@ -15,7 +15,24 @@ We try different GAN versions to increase our training data:
 - `DCGAN + DiffAugment`
 - `WGAN-GP + DCGAN Arch.`
 - `WGAN-GP + DCGAN Arch. + DiffAugment`
-- `WGAN-GP + Resnet Arch.`
+- TODO: `WGAN-GP + Resnet Arch.`
+
+#### Training 
+For training: 
+- DCGAN: `python dcgan.py --n_epochs ? --name 'dcgan' --diff_augment False --img_size ?`
+- DCGAN + DiffAugment: `python dcgan.py --n_epochs ? --name 'dcgan+diff' --diff_augment True --img_size ?`
+- WGAN-GP + DCGAN Arch.: `python wgan_gp.py --n_epochs ? --name 'wgan_gp' --diff_augment False --img_size ?`
+- WGAN-GP + DCGAN Arch. + DiffAugment: `python wgan_gp.py --n_epochs ? --name 'wgan_gp+diff' --diff_augment True --img_size ?`
+
+#### Image Generation
+
+After training model `--name`,  the checkpoint can be used to generate a batch of new images of size `--num_output`
+(**Note**: model paramters have to be the same as for the trained model, since the checkpoint only loads weights!): 
+
+- DCGAN: `python dcgan.py --name 'dcgan' --test True --num_output ? `
+- DCGAN + DiffAugment: `python dcgan.py --name 'dcgan+diff' --test True --num_output ? `
+- WGAN-GP + DCGAN Arch.: `python wgan_gp.py  --name 'wgan_gp' --test True --num_output ? `
+- WGAN-GP + DCGAN Arch. + DiffAugment: `python wgan_gp.py --n_epochs ? --name 'wgan_gp_diff'  --name 'wgan_gp' --test True --num_output ? `
 
 #### Evaluation
 We use the [offical pytorch FID implementation](https://github.com/mseitzer/pytorch-fid) to evaluate the generated images from the different GANs.
