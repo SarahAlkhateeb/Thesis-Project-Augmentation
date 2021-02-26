@@ -1,10 +1,7 @@
 ##### WGAN-GP with DCGAN Generator and Discriminator and optionally with DiffAugment#####
 # code inspired by https://github.com/aladdinpersson/Machine-Learning-Collection/tree/master/ML/Pytorch/GANs/4.%20WGAN-GP
 
-"""
-Models:
-Discriminator and Generator implementation from DCGAN paper
-"""
+
 import argparse
 import sys
 sys.path.append("..")
@@ -20,6 +17,7 @@ import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from torchvision.utils import save_image
+import matplotlib.pyplot as plt
 
 
 
@@ -28,6 +26,8 @@ parser.add_argument("--name", type=str, default="wgan_gp", help="name of the mod
 parser.add_argument("--n_epochs", type=int, default=700, help="number of epochs of training")
 parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
 parser.add_argument("--lr", type=float, default=1e-4, help="adam: learning rate")
+parser.add_argument("--b1", type=float, default=0.0, help="adam: decay of first order momentum of gradient")
+parser.add_argument("--b2", type=float, default=0.9, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--latent_dim", type=int, default=100, help="dimensionality of the latent space")
 parser.add_argument("--img_size", type=int, default=64, help="size of each image dimension")
 parser.add_argument("--channels", type=int, default=3, help="number of image channels")
@@ -41,19 +41,21 @@ print(opt)
 
 
 
+########### Models: Discriminator and Generator implementation from DCGAN paper ##########
+
 
 class Discriminator(nn.Module):
     def __init__(self, channels_img, features_d):
         super(Discriminator, self).__init__()
         self.disc = nn.Sequential(
-            # input: N x channels_img x 64 x 64
+            # input: N x channels_img x img_size x img_size
             nn.Conv2d(channels_img, features_d, kernel_size=4, stride=2, padding=1),
             nn.LeakyReLU(0.2),
             # _block(in_channels, out_channels, kernel_size, stride, padding)
             self._block(features_d, features_d * 2, 4, 2, 1),
             self._block(features_d * 2, features_d * 4, 4, 2, 1),
             self._block(features_d * 4, features_d * 8, 4, 2, 1),
-            # After all _block img output is 4x4 (Conv2d below makes into 1x1)
+            # Conv2d below makes output into 1x1
             nn.Conv2d(features_d * 8, 1, kernel_size=4, stride=2, padding=0),
         )
 
@@ -83,7 +85,7 @@ class Generator(nn.Module):
             nn.ConvTranspose2d(
                 features_g * 2, channels_img, kernel_size=4, stride=2, padding=1
             ),
-            # Output: N x channels_img x 64 x 64
+            # Output: N x channels_img x img_size x img_size
             nn.Tanh(),
         )
 
@@ -120,9 +122,11 @@ def test():
     z = torch.randn((N, noise_dim, 1, 1))
     assert gen(z).shape == (N, in_channels, H, W), "Generator test failed"
 
-"""
-Gradient penalty
-"""
+
+
+
+
+####################### Gradient penalty ##############################
 
 
 def gradient_penalty(critic, real, fake, device="cpu"):
@@ -147,22 +151,15 @@ def gradient_penalty(critic, real, fake, device="cpu"):
     return gradient_penalty
 
 
-"""
-Training of WGAN-GP
-"""
-# Hyperparameters etc.
+
+
+######################## Training ##################################
+
+# Hyperparameters 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-LEARNING_RATE = opt.lr
-BATCH_SIZE = opt.batch_size
-IMAGE_SIZE = opt.img_size
-CHANNELS_IMG = opt.channels
-Z_DIM = opt.latent_dim
-NUM_EPOCHS = opt.n_epochs
-FEATURES_CRITIC = 64 #aladin uses 16, pytorch 64
-FEATURES_GEN = 32 #alading uses 16, pytorch 32
-CRITIC_ITERATIONS = opt.critic_iter
-LAMBDA_GP = opt.lambda_gp
+FEATURES_CRITIC = 64 #controls size of the feature maps, pytorch 64
+FEATURES_GEN = 32 #controls size of the feature maps, pytorch 32
 
 # policy for diffaugment
 policy = 'color,translation,cutout'
@@ -172,19 +169,20 @@ if not opt.test:
     # Configure data loader
     transforms = transforms.Compose(
         [
-            transforms.Resize(IMAGE_SIZE),
-            transforms.CenterCrop(IMAGE_SIZE),
+            transforms.Resize(opt.img_size),
+            transforms.CenterCrop(opt.img_size),
             transforms.ToTensor(),
             transforms.Normalize(
-                [0.5 for _ in range(CHANNELS_IMG)], [0.5 for _ in range(CHANNELS_IMG)]),
+                [0.5 for _ in range(opt.channels)], [0.5 for _ in range(opt.channels)]),
         ]
     )
     #dataroot = "/home/2019/bodlak/MS-2021/datainbackup/thesis/thesis/GANs_Augmentation/data" #on server
-    dataroot= "/Users/lisabodlak/Desktop/Thesis/code/GANs_Augmentation/data" #on mac
+    #dataroot= "/Users/lisabodlak/Desktop/Thesis/code/GANs_Augmentation/data" #on mac
+    dataroot= os.path.join(sys.path[0], "data")
     dataset = datasets.ImageFolder(root=dataroot, transform=transforms)
     loader = DataLoader(
         dataset,
-        batch_size=BATCH_SIZE,
+        batch_size=opt.batch_size,
         shuffle=True,
     )
 
@@ -193,34 +191,41 @@ if not opt.test:
     # initialize gen and disc, note: discriminator should be called critic,
     # according to WGAN paper (since it no longer outputs between [0, 1])
 
-
-    gen = Generator(Z_DIM, CHANNELS_IMG, FEATURES_GEN).to(device)
-    critic = Discriminator(CHANNELS_IMG, FEATURES_CRITIC).to(device)
+    gen = Generator(opt.latent_dim, opt.channels, FEATURES_GEN).to(device)
+    critic = Discriminator(opt.channels, FEATURES_CRITIC).to(device)
     initialize_weights(gen)
     initialize_weights(critic)
 
+    #print(gen)
+    #print(critic)
+    
+
     # initializate optimizer
-    opt_gen = optim.Adam(gen.parameters(), lr=LEARNING_RATE, betas=(0.0, 0.9))
-    opt_critic = optim.Adam(critic.parameters(), lr=LEARNING_RATE, betas=(0.0, 0.9))
+    opt_gen = optim.Adam(gen.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2))
+    opt_critic = optim.Adam(critic.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2))
 
     # for saving image progress
     os.makedirs(f'output/{opt.name}', exist_ok=True) 
-    fixed_noise = torch.randn(32, Z_DIM, 1, 1).to(device)
-
+    fixed_noise = torch.randn(32, opt.latent_dim, 1, 1).to(device)
+    
+    # Lists to keep track of loss
+    G_losses = []
+    C_losses = []
 
     gen.train()
     critic.train()
 
-    for epoch in range(NUM_EPOCHS):
-        # Target labels not needed! <3 unsupervised
+    print("Starting Training Loop...")
+    for epoch in range(opt.n_epochs):
+        # Target labels not needed! 
         for batch_idx, (real, _) in enumerate(loader):
             real = real.to(device)
             cur_batch_size = real.shape[0]
 
             # Train Critic: max E[critic(real)] - E[critic(fake)]
             # equivalent to minimizing the negative of that
-            for _ in range(CRITIC_ITERATIONS):
-                noise = torch.randn(cur_batch_size, Z_DIM, 1, 1).to(device)
+            for _ in range(opt.critic_iter):
+                noise = torch.randn(cur_batch_size, opt.latent_dim, 1, 1).to(device)
                 fake = gen(noise)
                 #add differential augmentation if True
                 if opt.diff_augment:
@@ -231,7 +236,7 @@ if not opt.test:
                 critic_fake = critic(fake).reshape(-1)
                 gp = gradient_penalty(critic, real, fake, device=device)
                 loss_critic = (
-                    -(torch.mean(critic_real) - torch.mean(critic_fake)) + LAMBDA_GP * gp
+                    -(torch.mean(critic_real) - torch.mean(critic_fake)) + opt.lambda_gp * gp
                 )
                 critic.zero_grad()
                 loss_critic.backward(retain_graph=True)
@@ -244,11 +249,15 @@ if not opt.test:
             loss_gen.backward()
             opt_gen.step()
 
+            # Save Losses for plotting later
+            G_losses.append(loss_gen.item())
+            C_losses.append(loss_critic.item())
+
             # Print losses occasionally 
             if batch_idx % 3 == 0 and batch_idx > 0:
                 print(
-                    f"Epoch [{epoch}/{NUM_EPOCHS}] Batch {batch_idx}/{len(loader)} \
-                    Loss D: {loss_critic:.4f}, loss G: {loss_gen:.4f}"
+                    f"[Epoch {epoch}/{opt.n_epochs}] [Batch {batch_idx}/{len(loader)}] \
+                    [D loss: {loss_critic:.4f}], [G loss: {loss_gen:.4f}]"
                 )
         #save progress images 
         with torch.no_grad():
@@ -257,13 +266,30 @@ if not opt.test:
                 save_image(fake[:25], f'output/{opt.name}/%d.png' % epoch, nrow=5, normalize=True)
 
     #save generator weights           
-    state = {'generator': gen.state_dict(),'params': [Z_DIM, CHANNELS_IMG, FEATURES_GEN]}
+    state = {'generator': gen.state_dict(),'params': [opt.latent_dim, opt.channels, FEATURES_GEN]}
     filename=f'checkpoints/{opt.name}'
     torch.save(state, filename)
 
+    #save losses in plot
+    plt.figure(figsize=(10,5))
+    plt.title(f'{opt.name}: Generator and Critic Training Loss')
+    plt.plot(G_losses,label="G")
+    plt.plot(C_losses,label="C")
+    plt.xlabel("iterations")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.savefig(f'output/{opt.name}/loss.png')
+    #plt.show()
 
-#Generate images from trained model            
+
+
+
+
+############### Generate images from trained model #################
+
+            
 else:
+
     # dir to save generated images
     os.makedirs(f'result/{opt.name}', exist_ok=True)
 
@@ -276,7 +302,7 @@ else:
     #generate images 
     with torch.no_grad():
         for i in range(opt.num_output): 
-            noise = torch.randn(1, Z_DIM, 1, 1).to(device) 
+            noise = torch.randn(1, opt.latent_dim, 1, 1).to(device) 
             fake = gen(noise)
             save_image(fake, f'result/{opt.name}/%d.png' % i)
 
@@ -284,4 +310,3 @@ else:
 
 
                
-        
