@@ -1,4 +1,4 @@
-GANs_Augmentation/__pycache__/
-GANs_Augmentation/data/
-GANs_Augmentation/checkpoints/*
-!GANs_Augmentation/checkpoints/.gitkeep
+__pycache__/
+data/
+checkpoints/*
+checkpoints/.gitkeep

@@ -5,7 +5,7 @@
 import argparse
 import sys
 sys.path.append("..")
-from GANs_Augmentation.DiffAugment_pytorch import DiffAugment
+from DiffAugment_pytorch import DiffAugment
 import os
 import torch
 import torch.nn as nn

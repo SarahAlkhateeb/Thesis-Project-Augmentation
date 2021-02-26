@@ -5,7 +5,7 @@ import argparse
 import os
 import sys
 sys.path.append("..")
-from GANs_Augmentation.DiffAugment_pytorch import DiffAugment
+from DiffAugment_pytorch import DiffAugment
 import torchvision.transforms as transforms
 from torchvision.utils import save_image
 from torchvision import datasets
