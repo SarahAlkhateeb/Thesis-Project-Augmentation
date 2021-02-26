@@ -28,6 +28,8 @@ parser.add_argument("--batch_size", type=int, default=64, help="size of the batc
 parser.add_argument("--lr", type=float, default=1e-4, help="adam: learning rate")
 parser.add_argument("--b1", type=float, default=0.0, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--b2", type=float, default=0.9, help="adam: decay of first order momentum of gradient")
+parser.add_argument("--ndf", type=int, default=64, help="size of feature maps in critic")
+parser.add_argument("--ngf", type=int, default=64, help="size of feature maps in generator")
 parser.add_argument("--latent_dim", type=int, default=100, help="dimensionality of the latent space")
 parser.add_argument("--img_size", type=int, default=64, help="size of each image dimension")
 parser.add_argument("--channels", type=int, default=3, help="number of image channels")
@@ -42,8 +44,34 @@ print(opt)
 
 
 ########### Models: Discriminator and Generator implementation from DCGAN paper ##########
+class Discriminator(nn.Module):
+    def __init__(self):
+        super(Discriminator, self).__init__()
+        self.main = nn.Sequential(
+            # input is (nc) x 64 x 64
+            nn.Conv2d(opt.channels, opt.ndf, 4, 2, 1, bias=False),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf) x 32 x 32
+            nn.Conv2d(opt.ndf, opt.ndf * 2, 4, 2, 1, bias=False),
+            nn.InstanceNorm2d(opt.ndf * 2, affine=True),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf*2) x 16 x 16
+            nn.Conv2d(opt.ndf * 2, opt.ndf * 4, 4, 2, 1, bias=False),
+            nn.InstanceNorm2d(opt.ndf * 4, affine=True),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf*4) x 8 x 8
+            nn.Conv2d(opt.ndf * 4, opt.ndf * 8, 4, 2, 1, bias=False),
+            nn.InstanceNorm2d(opt.ndf * 8, affine=True),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf*8) x 4 x 4
+            nn.Conv2d(opt.ndf * 8, 1, 4, 1, 0, bias=False),
+            
+        )
 
+    def forward(self, input):
+        return self.main(input)
 
+'''
 class Discriminator(nn.Module):
     def __init__(self, channels_img, features_d):
         super(Discriminator, self).__init__()
@@ -70,9 +98,37 @@ class Discriminator(nn.Module):
 
     def forward(self, x):
         return self.disc(x)
+'''
 
+class Generator(nn.Module):
+    def __init__(self):
+        super(Generator, self).__init__()
+        self.main = nn.Sequential(
+            # input is Z, going into a convolution
+            nn.ConvTranspose2d(opt.latent_dim, opt.ngf * 8, 4, 1, 0, bias=False),
+            nn.BatchNorm2d(opt.ngf * 8),
+            nn.ReLU(True),
+            # state size. (ngf*8) x 4 x 4
+            nn.ConvTranspose2d(opt.ngf * 8, opt.ngf * 4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(opt.ngf * 4),
+            nn.ReLU(True),
+            # state size. (ngf*4) x 8 x 8
+            nn.ConvTranspose2d(opt.ngf * 4, opt.ngf * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(opt.ngf * 2),
+            nn.ReLU(True),
+            # state size. (ngf*2) x 16 x 16
+            nn.ConvTranspose2d(opt.ngf * 2, opt.ngf, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(opt.ngf),
+            nn.ReLU(True),
+            # state size. (ngf) x 32 x 32
+            nn.ConvTranspose2d( opt.ngf, opt.channels, 4, 2, 1, bias=False),
+            nn.Tanh()
+            # state size. (nc) x 64 x 64
+        )
 
-
+    def forward(self, input):
+        return self.main(input)
+'''
 class Generator(nn.Module):
     def __init__(self, channels_noise, channels_img, features_g):
         super(Generator, self).__init__()
@@ -100,7 +156,7 @@ class Generator(nn.Module):
 
     def forward(self, x):
         return self.net(x)
-
+'''
 
 def initialize_weights(model):
     # Initializes weights according to the DCGAN paper
@@ -155,11 +211,9 @@ def gradient_penalty(critic, real, fake, device="cpu"):
 
 ######################## Training ##################################
 
-# Hyperparameters 
-
+# Decide which device we want to run on
 device = "cuda" if torch.cuda.is_available() else "cpu"
-FEATURES_CRITIC = 64 #controls size of the feature maps, pytorch 64
-FEATURES_GEN = 32 #controls size of the feature maps, pytorch 32
+
 
 # policy for diffaugment
 policy = 'color,translation,cutout'
@@ -191,13 +245,15 @@ if not opt.test:
     # initialize gen and disc, note: discriminator should be called critic,
     # according to WGAN paper (since it no longer outputs between [0, 1])
 
-    gen = Generator(opt.latent_dim, opt.channels, FEATURES_GEN).to(device)
-    critic = Discriminator(opt.channels, FEATURES_CRITIC).to(device)
+    gen = Generator().to(device)
+    critic = Discriminator().to(device)
+
+    
     initialize_weights(gen)
     initialize_weights(critic)
 
-    #print(gen)
-    #print(critic)
+    print(gen)
+    print(critic)
     
 
     # initializate optimizer
@@ -266,7 +322,7 @@ if not opt.test:
                 save_image(fake[:25], f'output/{opt.name}/%d.png' % epoch, nrow=5, normalize=True)
 
     #save generator weights           
-    state = {'generator': gen.state_dict(),'params': [opt.latent_dim, opt.channels, FEATURES_GEN]}
+    state = {'generator': gen.state_dict()}
     filename=f'checkpoints/{opt.name}'
     torch.save(state, filename)
 
@@ -295,8 +351,7 @@ else:
 
     #load checkpoints for generator
     state_dict = torch.load(f'checkpoints/{opt.name}')
-    params = state_dict['params']
-    gen = Generator(*params).to(device)
+    gen = Generator().to(device)
     gen.load_state_dict(state_dict['generator'])
     
     #generate images 

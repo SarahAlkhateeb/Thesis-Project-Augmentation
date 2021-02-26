@@ -134,7 +134,7 @@ if not opt.test:
      # Loss function
     criterion = torch.nn.BCELoss()
 
-    # Initialize generator and discriminator a
+    # Initialize generator and discriminator 
     generator = Generator(opt.ngpu).to(device)
     discriminator = Discriminator(opt.ngpu).to(device)
 
