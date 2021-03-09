@@ -240,8 +240,8 @@ if not opt.test:
                 print(
                 "[Epoch %d/%d] [Batch %d/%d] \
                 [D loss: %f] [G loss: %f]"
-                % (epoch, opt.n_epochs, i, len(dataloader), errD.item(), errG.item())
-            )
+                % (epoch, opt.n_epochs, i, len(dataloader), errD.item(), errG.item()))
+                
         #save progress images on fixed noise every second epoch
         with torch.no_grad():
             if epoch % 20 == 0:

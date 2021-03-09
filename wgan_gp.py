@@ -279,6 +279,9 @@ if not opt.test:
         # Target labels not needed! 
         for batch_idx, (real, _) in enumerate(loader):
             real = real.to(device)
+            #add differential augmentation if True
+            if opt.diff_augment:
+                real=DiffAugment(real,policy=policy)
             cur_batch_size = real.shape[0]
 
             # Train Critic: max E[critic(real)] - E[critic(fake)]
@@ -288,7 +291,6 @@ if not opt.test:
                 fake = gen(noise)
                 #add differential augmentation if True
                 if opt.diff_augment:
-                    real=DiffAugment(real,policy=policy)
                     fake=DiffAugment(fake,policy=policy)
                 
                 critic_real = critic(real).reshape(-1)   
