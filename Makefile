@@ -2,28 +2,28 @@
 
 
 dcgan:
-	bash /opt/local/bin/run_py_job.sh -e dit245_group15 -p cpu -c 4 -s dcgan.py -- --name dcgan --img_size 416
+	bash /opt/local/bin/run_py_job.sh -e pytorch-CycleGAN-and-pix2pix -p gpu -c 4 -s dcgan.py -- --name dcgan_real 
 
 dcgan_diff:
-	bash /opt/local/bin/run_py_job.sh -e dit245_group15 -p cpu -c 4 -s dcgan.py -- --name dcgan+diff --img_size 416 --diff_augment True
+	bash /opt/local/bin/run_py_job.sh -e pytorch-CycleGAN-and-pix2pix -p gpu_shannon -c 4 -s dcgan.py -- --name dcgan+diff_real  --diff_augment True
 
 wgan:
-	bash /opt/local/bin/run_py_job.sh -e dit245_group15 -p cpu -c 4 -s wgan_gp.py  -- --name wgan_gp --img_size 416
+	bash /opt/local/bin/run_py_job.sh -e pytorch-CycleGAN-and-pix2pix -p gpu -c 4 -s wgan_gp.py  -- --name wgan_gp_real
 
 wgan_diff:
-	bash /opt/local/bin/run_py_job.sh -e dit245_group15 -p cpu -c 4 -s wgan_gp.py  -- --name wgan_gp+diff --img_size 416
+	bash /opt/local/bin/run_py_job.sh -e pytorch-CycleGAN-and-pix2pix -p gpu_shannon -c 4 -s wgan_gp.py  -- --name wgan_gp+diff_real --diff_augment True
 
 dcgan_test:
-	bash /opt/local/bin/run_py_job.sh -e dit245_group15 -p cpu -c 4 -s dcgan.py -- --name dcgan --test True --num_output 1000
+	bash /opt/local/bin/run_py_job.sh -e pytorch-CycleGAN-and-pix2pix -p cpu -c 4 -s dcgan.py -- --name dcgan_real --test True --num_output 1000
 
 dcgan_diff_test:
-	bash /opt/local/bin/run_py_job.sh -e dit245_group15 -p cpu -c 4 -s dcgan.py -- --name dcgan+diff --test True --num_output 1000
+	bash /opt/local/bin/run_py_job.sh -e pytorch-CycleGAN-and-pix2pix -p cpu -c 4 -s dcgan.py -- --name dcgan+diff_real --test True --num_output 1000
 
 wgan_test:
-	bash /opt/local/bin/run_py_job.sh -e dit245_group15 -p cpu -c 4 -s wgan_gp.py  -- --name wgan_gp --test True --num_output 1000
+	bash /opt/local/bin/run_py_job.sh -e pytorch-CycleGAN-and-pix2pix -p cpu -c 4 -s wgan_gp.py  -- --name wgan_gp_real --test True --num_output 1000
 
 wgan_diff_test:
-	bash /opt/local/bin/run_py_job.sh -e dit245_group15 -p cpu -c 4 -s wgan_gp.py  -- --name wgan_gp+diff --test True --num_output 1000
+	bash /opt/local/bin/run_py_job.sh -e pytorch-CycleGAN-and-pix2pix -p cpu -c 4 -s wgan_gp.py  -- --name wgan_gp+diff_real --test True --num_output 1000
 
 clean:
 	rm slurm-*
