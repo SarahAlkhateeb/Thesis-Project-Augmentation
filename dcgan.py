@@ -244,7 +244,7 @@ if not opt.test:
             )
         #save progress images on fixed noise every second epoch
         with torch.no_grad():
-            if epoch % 2 == 0:
+            if epoch % 20 == 0:
                 fake = generator(fixed_noise)
                 save_image(fake[:25], f'output/{opt.name}/%d.png' % epoch, nrow=5, normalize=True)
                 
