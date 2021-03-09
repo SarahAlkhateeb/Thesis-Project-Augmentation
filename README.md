@@ -12,10 +12,10 @@ We try different GAN versions to increase our training data:
 
 #### Training 
 For training: 
-- DCGAN: `python dcgan.py --n_epochs ? --name 'dcgan' --diff_augment False --img_size ?`
-- DCGAN + DiffAugment: `python dcgan.py --n_epochs ? --name 'dcgan+diff' --diff_augment True --img_size ?`
-- WGAN-GP + DCGAN Arch.: `python wgan_gp.py --n_epochs ? --name 'wgan_gp' --diff_augment False --img_size ?`
-- WGAN-GP + DCGAN Arch. + DiffAugment: `python wgan_gp.py --n_epochs ? --name 'wgan_gp+diff' --diff_augment True --img_size ?`
+- DCGAN: `python dcgan.py --n_epochs ? --name 'dcgan' --diff_augment False`
+- DCGAN + DiffAugment: `python dcgan.py --n_epochs ? --name 'dcgan+diff' --diff_augment True`
+- WGAN-GP + DCGAN Arch.: `python wgan_gp.py --n_epochs ? --name 'wgan_gp' --diff_augment False `
+- WGAN-GP + DCGAN Arch. + DiffAugment: `python wgan_gp.py --n_epochs ? --name 'wgan_gp+diff' --diff_augment True`
 
 #### Image Generation
 

@@ -38,6 +38,7 @@ parser.add_argument("--lambda_gp", type=int, default=10, help="penalty coefficie
 parser.add_argument("--test", type=bool, default=False, help="if true train, if false generate images from trained model")
 parser.add_argument("--num_output",type=int, default=100, help='number of generated outputs')
 parser.add_argument("--diff_augment",type=bool, default=False, help='use Diffaugment or not. Default: False')
+parser.add_argument("--data_real",type=bool, default=False, help='use real data or enhanced data. default: real')
 opt = parser.parse_args()
 print(opt)
 
@@ -230,10 +231,12 @@ if not opt.test:
                 [0.5 for _ in range(opt.channels)], [0.5 for _ in range(opt.channels)]),
         ]
     )
-    #dataroot = "/home/2019/bodlak/MS-2021/datainbackup/thesis/thesis/GANs_Augmentation/data" #on server
-    #dataroot= "/Users/lisabodlak/Desktop/Thesis/code/GANs_Augmentation/data" #on mac
-    dataroot= os.path.join(sys.path[0], "data")
-    dataset = datasets.ImageFolder(root=dataroot, transform=transforms)
+  
+    if opt.data_real == False:
+        path = os.path.join(sys.path[0], "data_real")
+    else:
+        path = os.path.join(sys.path[0], "data_fake")
+    dataset = datasets.ImageFolder(root=path, transform=transforms)
     loader = DataLoader(
         dataset,
         batch_size=opt.batch_size,

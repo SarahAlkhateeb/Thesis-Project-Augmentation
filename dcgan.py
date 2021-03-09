@@ -29,6 +29,7 @@ parser.add_argument("--channels", type=int, default=3, help="number of image cha
 parser.add_argument("--test", type=bool, default=False, help="if true train, if false generate images from trained model")
 parser.add_argument("--num_output",type=int, default=100, help='number of generated outputs')
 parser.add_argument("--diff_augment",type=bool, default=False, help='use Diffaugment or not. Default: False')
+parser.add_argument("--data_real",type=bool, default=False, help='use real data or enhanced data. default: real')
 opt = parser.parse_args()
 print(opt)
 
@@ -119,7 +120,10 @@ device = torch.device("cuda:0" if (torch.cuda.is_available() and opt.ngpu > 0) e
 if not opt.test:
 
     # Configure data loader
-    path = os.path.join(sys.path[0], "data")
+    if opt.data_real == False:
+        path = os.path.join(sys.path[0], "data_real")
+    else:
+        path = os.path.join(sys.path[0], "data_fake")
     dataset = datasets.ImageFolder(root=path, transform=transforms.Compose(
         [transforms.Resize(opt.img_size), 
         transforms.CenterCrop(opt.img_size),
