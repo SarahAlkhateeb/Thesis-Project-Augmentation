@@ -5,7 +5,7 @@ dcgan:
 	bash /opt/local/bin/run_py_job.sh -e pytorch-CycleGAN-and-pix2pix -p gpu -c 4 -s dcgan.py -- --name dcgan_real 
 
 dcgan_diff:
-	bash /opt/local/bin/run_py_job.sh -e pytorch-CycleGAN-and-pix2pix -p gpu_shannon -c 4 -s dcgan.py -- --name dcgan+diff_real  --diff_augment True
+	bash /opt/local/bin/run_py_job.sh -e pytorch-CycleGAN-and-pix2pix -p gpu-shannon -c 4 -s dcgan.py -- --name dcgan+diff_real  --diff_augment True
 
 wgan:
 	bash /opt/local/bin/run_py_job.sh -e pytorch-CycleGAN-and-pix2pix -p gpu -c 4 -s wgan_gp.py  -- --name wgan_gp_real
