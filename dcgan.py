@@ -303,4 +303,4 @@ else:
         for i in range(opt.num_output): 
             noise = torch.randn(1, opt.latent_dim, 1, 1).to(device) 
             fake = generator(noise)
-            save_image(fake, f'result/{opt.name}/%d.png' % i)
+            save_image(fake, f'result/{opt.name}/%d.png' % i, normalize=True)
