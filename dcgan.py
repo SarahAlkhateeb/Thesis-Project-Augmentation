@@ -241,17 +241,26 @@ if not opt.test:
                 "[Epoch %d/%d] [Batch %d/%d] \
                 [D loss: %f] [G loss: %f]"
                 % (epoch, opt.n_epochs, i, len(dataloader), errD.item(), errG.item()))
-                
+
         #save progress images on fixed noise every second epoch
         with torch.no_grad():
             if epoch % 20 == 0:
                 fake = generator(fixed_noise)
                 save_image(fake[:25], f'output/{opt.name}/%d.png' % epoch, nrow=5, normalize=True)
-                
+
+        #save generator weights 
+        if epoch % 1000 == 0:             
+            state = {'generator': generator.state_dict()}
+            filename=f'checkpoints/{opt.name}_{epoch}'
+            torch.save(state, filename)
+
+    with torch.no_grad():
+        fake = generator(fixed_noise)
+        save_image(fake[:25], f'output/{opt.name}/%d.png' % epoch, nrow=5, normalize=True)        
 
     #save generator weights           
     state = {'generator': generator.state_dict()}
-    filename=f'checkpoints/{opt.name}'
+    filename=f'checkpoints/{opt.name}_last'
     torch.save(state, filename)
 
     #save losses in plot

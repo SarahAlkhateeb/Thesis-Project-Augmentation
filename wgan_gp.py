@@ -279,6 +279,7 @@ if not opt.test:
         # Target labels not needed! 
         for batch_idx, (real, _) in enumerate(loader):
             real = real.to(device)
+            
             #add differential augmentation if True
             if opt.diff_augment:
                 real=DiffAugment(real,policy=policy)
@@ -289,6 +290,7 @@ if not opt.test:
             for _ in range(opt.critic_iter):
                 noise = torch.randn(cur_batch_size, opt.latent_dim, 1, 1).to(device)
                 fake = gen(noise)
+                
                 #add differential augmentation if True
                 if opt.diff_augment:
                     fake=DiffAugment(fake,policy=policy)
@@ -325,10 +327,20 @@ if not opt.test:
             if epoch % 20 == 0:
                 fake = gen(fixed_noise)
                 save_image(fake[:25], f'output/{opt.name}/%d.png' % epoch, nrow=5, normalize=True)
+        
+        #save generator weights 
+        if epoch % 1000 == 0:             
+            state = {'generator': gen.state_dict()}
+            filename=f'checkpoints/{opt.name}_{epoch}'
+            torch.save(state, filename)
 
-    #save generator weights           
+    with torch.no_grad():
+        fake = gen(fixed_noise)
+        save_image(fake[:25], f'output/{opt.name}/%d.png' % epoch, nrow=5, normalize=True)    
+
+    #save last generator weights           
     state = {'generator': gen.state_dict()}
-    filename=f'checkpoints/{opt.name}'
+    filename=f'checkpoints/{opt.name}_last'
     torch.save(state, filename)
 
     #save losses in plot
