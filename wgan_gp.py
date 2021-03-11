@@ -39,6 +39,7 @@ parser.add_argument("--test", type=bool, default=False, help="if true train, if 
 parser.add_argument("--num_output",type=int, default=100, help='number of generated outputs')
 parser.add_argument("--diff_augment",type=bool, default=False, help='use Diffaugment or not. Default: False')
 parser.add_argument("--data_real",type=bool, default=False, help='use real data or enhanced data. default: real')
+parser.add_argument("--filtered_data",type=bool, default=False, help='use filtered data or all. default: all')
 opt = parser.parse_args()
 print(opt)
 
@@ -233,9 +234,14 @@ if not opt.test:
     )
   
     if opt.data_real == False:
+        if opt.filtered_data == True:
+            path = os.path.join(sys.path[0], "data_real_filtered")
         path = os.path.join(sys.path[0], "data_real")
     else:
+        if opt.filtered_data == True:
+            path = os.path.join(sys.path[0], "data_fake_filtered")
         path = os.path.join(sys.path[0], "data_fake")
+
     dataset = datasets.ImageFolder(root=path, transform=transforms)
     loader = DataLoader(
         dataset,
@@ -243,6 +249,7 @@ if not opt.test:
         shuffle=True,
     )
 
+   
 
 
     # initialize gen and disc, note: discriminator should be called critic,
