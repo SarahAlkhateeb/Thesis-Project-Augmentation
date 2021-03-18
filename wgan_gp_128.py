@@ -31,7 +31,7 @@ parser.add_argument("--b2", type=float, default=0.9, help="adam: decay of first 
 parser.add_argument("--ndf", type=int, default=64, help="size of feature maps in critic")
 parser.add_argument("--ngf", type=int, default=64, help="size of feature maps in generator")
 parser.add_argument("--latent_dim", type=int, default=100, help="dimensionality of the latent space")
-parser.add_argument("--img_size", type=int, default=64, help="size of each image dimension")
+parser.add_argument("--img_size", type=int, default=128, help="size of each image dimension")
 parser.add_argument("--channels", type=int, default=3, help="number of image channels")
 parser.add_argument("--critic_iter", type=int, default=5, help="number of critic iterations before generator update")
 parser.add_argument("--lambda_gp", type=int, default=10, help="penalty coefficient")
@@ -50,115 +50,69 @@ class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator, self).__init__()
         self.main = nn.Sequential(
-            # input is (nc) x 64 x 64
+            ##added 
+            #input is (nc) x 128 x 128
             nn.Conv2d(opt.channels, opt.ndf, 4, 2, 1, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf) x 32 x 32
+            # input is (nc) x 64 x 64
             nn.Conv2d(opt.ndf, opt.ndf * 2, 4, 2, 1, bias=False),
             nn.InstanceNorm2d(opt.ndf * 2, affine=True),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*2) x 16 x 16
+            # state size. (ndf) x 32 x 32
             nn.Conv2d(opt.ndf * 2, opt.ndf * 4, 4, 2, 1, bias=False),
             nn.InstanceNorm2d(opt.ndf * 4, affine=True),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*4) x 8 x 8
+            # state size. (ndf*2) x 16 x 16
             nn.Conv2d(opt.ndf * 4, opt.ndf * 8, 4, 2, 1, bias=False),
             nn.InstanceNorm2d(opt.ndf * 8, affine=True),
             nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf*4) x 8 x 8
+            nn.Conv2d(opt.ndf * 8, opt.ndf * 16, 4, 2, 1, bias=False),
+            nn.InstanceNorm2d(opt.ndf * 16, affine=True),
+            nn.LeakyReLU(0.2, inplace=True),
             # state size. (ndf*8) x 4 x 4
-            nn.Conv2d(opt.ndf * 8, 1, 4, 1, 0, bias=False),
+            nn.Conv2d(opt.ndf * 16, 1, 4, 1, 0, bias=False),
             
         )
 
     def forward(self, input):
         return self.main(input)
 
-'''
-class Discriminator(nn.Module):
-    def __init__(self, channels_img, features_d):
-        super(Discriminator, self).__init__()
-        self.disc = nn.Sequential(
-            # input: N x channels_img x img_size x img_size
-            nn.Conv2d(channels_img, features_d, kernel_size=4, stride=2, padding=1),
-            nn.LeakyReLU(0.2),
-            # _block(in_channels, out_channels, kernel_size, stride, padding)
-            self._block(features_d, features_d * 2, 4, 2, 1),
-            self._block(features_d * 2, features_d * 4, 4, 2, 1),
-            self._block(features_d * 4, features_d * 8, 4, 2, 1),
-            # Conv2d below makes output into 1x1
-            nn.Conv2d(features_d * 8, 1, kernel_size=4, stride=2, padding=0),
-        )
-
-    def _block(self, in_channels, out_channels, kernel_size, stride, padding):
-        return nn.Sequential(
-            nn.Conv2d(
-                in_channels, out_channels, kernel_size, stride, padding, bias=False,
-            ),
-            nn.InstanceNorm2d(out_channels, affine=True), #wgan-gp papers suggests normalization schemes in critic which don’t introduce correlations between examples.  
-            nn.LeakyReLU(0.2),
-        )
-
-    def forward(self, x):
-        return self.disc(x)
-'''
 
 class Generator(nn.Module):
     def __init__(self):
         super(Generator, self).__init__()
         self.main = nn.Sequential(
             # input is Z, going into a convolution
-            nn.ConvTranspose2d(opt.latent_dim, opt.ngf * 8, 4, 1, 0, bias=False),
+            nn.ConvTranspose2d(opt.latent_dim, opt.ngf * 16, 4, 1, 0, bias=False),
+            nn.BatchNorm2d(opt.ngf * 16),
+            nn.ReLU(True),
+            # state size. (ngf*16) x 4 x 4
+            nn.ConvTranspose2d(opt.ngf * 16, opt.ngf * 8, 4, 2, 1, bias=False),
             nn.BatchNorm2d(opt.ngf * 8),
             nn.ReLU(True),
-            # state size. (ngf*8) x 4 x 4
+            # state size. (ngf*8) x 8 x 8
             nn.ConvTranspose2d(opt.ngf * 8, opt.ngf * 4, 4, 2, 1, bias=False),
             nn.BatchNorm2d(opt.ngf * 4),
             nn.ReLU(True),
-            # state size. (ngf*4) x 8 x 8
+            # state size. (ngf*4) x 16 x 16
             nn.ConvTranspose2d(opt.ngf * 4, opt.ngf * 2, 4, 2, 1, bias=False),
             nn.BatchNorm2d(opt.ngf * 2),
             nn.ReLU(True),
-            # state size. (ngf*2) x 16 x 16
-            nn.ConvTranspose2d(opt.ngf * 2, opt.ngf, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(opt.ngf),
-            nn.ReLU(True),
             # state size. (ngf) x 32 x 32
+            nn.ConvTranspose2d( opt.ngf * 2, opt.ngf, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(opt.ngf),
+            nn.Tanh(),
+            # state size. (nc) x 64 x 64
+            #added
             nn.ConvTranspose2d( opt.ngf, opt.channels, 4, 2, 1, bias=False),
             nn.Tanh()
-            # state size. (nc) x 64 x 64
+            # state size. (nc) x 128 x 128
         )
 
     def forward(self, input):
         return self.main(input)
-'''
-class Generator(nn.Module):
-    def __init__(self, channels_noise, channels_img, features_g):
-        super(Generator, self).__init__()
-        self.net = nn.Sequential(
-            # Input: N x channels_noise x 1 x 1
-            self._block(channels_noise, features_g * 16, 4, 1, 0),  # img: 4x4
-            self._block(features_g * 16, features_g * 8, 4, 2, 1),  # img: 8x8
-            self._block(features_g * 8, features_g * 4, 4, 2, 1),  # img: 16x16
-            self._block(features_g * 4, features_g * 2, 4, 2, 1),  # img: 32x32
-            nn.ConvTranspose2d(
-                features_g * 2, channels_img, kernel_size=4, stride=2, padding=1
-            ),
-            # Output: N x channels_img x img_size x img_size
-            nn.Tanh(),
-        )
 
-    def _block(self, in_channels, out_channels, kernel_size, stride, padding):
-        return nn.Sequential(
-            nn.ConvTranspose2d(
-                in_channels, out_channels, kernel_size, stride, padding, bias=False,
-            ),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU(),
-        )
-
-    def forward(self, x):
-        return self.net(x)
-'''
 
 def initialize_weights(model):
     # Initializes weights according to the DCGAN paper
@@ -179,8 +133,6 @@ def test():
     gen = Generator(noise_dim, in_channels, 8)
     z = torch.randn((N, noise_dim, 1, 1))
     assert gen(z).shape == (N, in_channels, H, W), "Generator test failed"
-
-
 
 
 
@@ -207,8 +159,6 @@ def gradient_penalty(critic, real, fake, device="cpu"):
     gradient_norm = gradient.norm(2, dim=1)
     gradient_penalty = torch.mean((gradient_norm - 1) ** 2)
     return gradient_penalty
-
-
 
 
 ######################## Training ##################################
@@ -249,9 +199,6 @@ if not opt.test:
         shuffle=True,
     )
 
-   
-
-
     # initialize gen and disc, note: discriminator should be called critic,
     # according to WGAN paper (since it no longer outputs between [0, 1])
 
@@ -286,8 +233,6 @@ if not opt.test:
         # Target labels not needed! 
         for batch_idx, (real, _) in enumerate(loader):
             real = real.to(device)
-            #printing a batch of real images for comparison
-            #save_image(real[:25], f'output/real2.png', nrow=5, normalize=True)
             
             #add differential augmentation if True
             if opt.diff_augment:

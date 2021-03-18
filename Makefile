@@ -27,3 +27,9 @@ wgan_diff_test:
 
 clean:
 	rm slurm-*
+
+
+
+python -m pytorch_fid result/dcgan+diff_fake_bs32_e10000 data_fake
+
+/home/2019/bodlak/MS-2021/datainbackup/thesis-data-augmentation/data_fake /home/2019/bodlak/MS-2021/datainbackup/thesis-data-augmentation/result/wgan_gp+diff_fake_bs32_e10000_last
