@@ -33,3 +33,6 @@ clean:
 python -m pytorch_fid result/dcgan+diff_fake_bs32_e10000 data_fake
 
 /home/2019/bodlak/MS-2021/datainbackup/thesis-data-augmentation/data_fake /home/2019/bodlak/MS-2021/datainbackup/thesis-data-augmentation/result/wgan_gp+diff_fake_bs32_e10000_last
+
+stylegan:
+	bash /opt/local/bin/run_py_job.sh -e stylegan -p gpu-shannon -c 8 -s train.py -- --outdir=training-runs --data=resized_images --gpus=1 --workers 2

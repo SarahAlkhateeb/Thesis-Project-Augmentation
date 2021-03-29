@@ -31,7 +31,7 @@ parser.add_argument("--b2", type=float, default=0.9, help="adam: decay of first 
 parser.add_argument("--ndf", type=int, default=64, help="size of feature maps in critic")
 parser.add_argument("--ngf", type=int, default=64, help="size of feature maps in generator")
 parser.add_argument("--latent_dim", type=int, default=100, help="dimensionality of the latent space")
-parser.add_argument("--img_size", type=int, default=128, help="size of each image dimension")
+parser.add_argument("--img_size", type=int, default=512, help="size of each image dimension")
 parser.add_argument("--channels", type=int, default=3, help="number of image channels")
 parser.add_argument("--critic_iter", type=int, default=5, help="number of critic iterations before generator update")
 parser.add_argument("--lambda_gp", type=int, default=10, help="penalty coefficient")
@@ -50,28 +50,38 @@ class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator, self).__init__()
         self.main = nn.Sequential(
-            ##added 
-            #input is (nc) x 128 x 128
+            
+            # added input is (nc) x 512 x 512
             nn.Conv2d(opt.channels, opt.ndf, 4, 2, 1, bias=False),
+            nn.InstanceNorm2d(opt.ndf, affine=True),
             nn.LeakyReLU(0.2, inplace=True),
-            # input is (nc) x 64 x 64
+            # added input is (ndf) x 256 x 256
             nn.Conv2d(opt.ndf, opt.ndf * 2, 4, 2, 1, bias=False),
             nn.InstanceNorm2d(opt.ndf * 2, affine=True),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf) x 32 x 32
+           # input is (ndf*2) x 128 x 128
             nn.Conv2d(opt.ndf * 2, opt.ndf * 4, 4, 2, 1, bias=False),
             nn.InstanceNorm2d(opt.ndf * 4, affine=True),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*2) x 16 x 16
+             # state size. (ndf*4) x 64 x 64
             nn.Conv2d(opt.ndf * 4, opt.ndf * 8, 4, 2, 1, bias=False),
             nn.InstanceNorm2d(opt.ndf * 8, affine=True),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*4) x 8 x 8
+            # state size. (ndf*8) x 32 x 32
             nn.Conv2d(opt.ndf * 8, opt.ndf * 16, 4, 2, 1, bias=False),
             nn.InstanceNorm2d(opt.ndf * 16, affine=True),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*8) x 4 x 4
-            nn.Conv2d(opt.ndf * 16, 1, 4, 1, 0, bias=False),
+            # state size. (ndf*16) x 16 x 16
+            nn.Conv2d(opt.ndf * 16, opt.ndf * 32, 4, 2, 1, bias=False),
+            nn.InstanceNorm2d(opt.ndf *32, affine=True),
+            nn.LeakyReLU(0.2, inplace=True),
+            # state size. (ndf*32) x 8 x 8
+            nn.Conv2d(opt.ndf * 32, opt.ndf * 64, 4, 2, 1, bias=False),
+            nn.InstanceNorm2d(opt.ndf * 64, affine=True),
+            nn.LeakyReLU(0.2, inplace=True),
+            #state size (ndf*64) x 4 x 4
+            nn.Conv2d(opt.ndf * 64, 1, 4, 1, 0, bias=False),
+
             
         )
 
@@ -84,30 +94,38 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.main = nn.Sequential(
             # input is Z, going into a convolution
-            nn.ConvTranspose2d(opt.latent_dim, opt.ngf * 16, 4, 1, 0, bias=False),
+            nn.ConvTranspose2d(opt.latent_dim, opt.ngf * 64, 4, 1, 0, bias=False),
+            nn.BatchNorm2d(opt.ngf * 64),
+            nn.ReLU(True),
+            # state size. (ngf*64) x 4 x 4
+            nn.ConvTranspose2d(opt.ngf * 64, opt.ngf * 32, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(opt.ngf * 32),
+            nn.ReLU(True),
+            # state size. (ngf*32) x 8 x 8
+            nn.ConvTranspose2d(opt.ngf * 32, opt.ngf * 16, 4, 2, 1, bias=False),
             nn.BatchNorm2d(opt.ngf * 16),
             nn.ReLU(True),
-            # state size. (ngf*16) x 4 x 4
+            # state size. (ngf*16) x 16 x 16
             nn.ConvTranspose2d(opt.ngf * 16, opt.ngf * 8, 4, 2, 1, bias=False),
             nn.BatchNorm2d(opt.ngf * 8),
             nn.ReLU(True),
-            # state size. (ngf*8) x 8 x 8
-            nn.ConvTranspose2d(opt.ngf * 8, opt.ngf * 4, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(opt.ngf * 4),
+            # state size. (ngf*8) x 32 x 32
+            nn.ConvTranspose2d( opt.ngf * 8, opt.ngf*4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(opt.ngf*4),
             nn.ReLU(True),
-            # state size. (ngf*4) x 16 x 16
-            nn.ConvTranspose2d(opt.ngf * 4, opt.ngf * 2, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(opt.ngf * 2),
+            # state size. (ngf*4) x 64 x 64
+            nn.ConvTranspose2d( opt.ngf * 4, opt.ngf*2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(opt.ngf*2),
             nn.ReLU(True),
-            # state size. (ngf) x 32 x 32
+            # state size. (ngf*2) x 128 x 128
             nn.ConvTranspose2d( opt.ngf * 2, opt.ngf, 4, 2, 1, bias=False),
             nn.BatchNorm2d(opt.ngf),
-            nn.Tanh(),
-            # state size. (nc) x 64 x 64
-            #added
-            nn.ConvTranspose2d( opt.ngf, opt.channels, 4, 2, 1, bias=False),
+            nn.ReLU(True),
+            # state size. (ngf) x 256 x 256
+            nn.ConvTranspose2d(opt.ngf, opt.channels, 4, 2, 1, bias=False),
             nn.Tanh()
-            # state size. (nc) x 128 x 128
+            # state size. (nc) x 512 x 512
+            
         )
 
     def forward(self, input):
