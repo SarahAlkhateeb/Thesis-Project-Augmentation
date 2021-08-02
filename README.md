@@ -8,7 +8,6 @@ We try different GAN versions to increase our training data:
 - `DCGAN + DiffAugment`
 - `WGAN-GP + DCGAN Arch.`
 - `WGAN-GP + DCGAN Arch. + DiffAugment`
-- TODO: `WGAN-GP + Resnet Arch.`
 
 #### Training 
 For training: 
